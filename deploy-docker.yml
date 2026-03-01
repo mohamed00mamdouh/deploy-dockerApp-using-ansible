@@ -1,0 +1,59 @@
+---
+- name: Install docker
+  hosts: docker-server
+  become: yes
+  tasks:
+    - name: Install docker
+      yum: 
+        name: docker
+        update_cache: yes
+        state: present
+    - name: Start docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+- name: Install docker-compose
+  hosts: docker-server
+  become: yes
+  tasks:
+    - name: Create docker-compose direcotry
+      file:
+        path: ~/.docker/cli-plugins
+        state: directory
+    - name: Instatall docker-compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/v5.0.1/docker-compose-linux-x86_64 
+        dest: ~/.docker/cli-plugins/docker-compose
+        mode: +x
+
+- name: Add user to docker group
+  hosts: docker-server
+  become: yes
+  tasks:
+    - name: Add user to docker group
+      user:
+        name: user_name
+        groups: docker
+        append: yes
+    - name: Reconnect to the server
+      meta: reset_connection
+
+- name: Start docker containers
+  hosts: docker-server
+  vars_files:
+    - docker-vars
+  tasks:
+    - name: Copy docker compose file
+      copy:
+        src: ./docker-compose.yml
+        dest: /home/user_name
+    - name: Docker login
+      docker_login:
+        username: dockerhub_user_name
+        password: "{{docker_password}}" 
+    - name: Start containers using docker-compose
+      community.docker.docker_compose_v2:
+        project_src: /home/user_name
+        

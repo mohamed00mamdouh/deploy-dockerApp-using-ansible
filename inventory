@@ -1,0 +1,2 @@
+[docker-server]
+host_ip ansible_user=user_name
